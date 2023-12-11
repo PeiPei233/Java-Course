@@ -12,10 +12,18 @@ import org.apache.lucene.store.FSDirectory;
 import java.io.IOException;
 import java.nio.file.Path;
 
+/**
+ * PDF indexer.
+ */
 public class PDFIndexer {
 
     private final IndexWriter writer;
 
+    /**
+     * Create a PDF indexer.
+     *
+     * @param indexPath The path of index directory.
+     */
     public PDFIndexer(String indexPath) throws IOException {
         Directory directory = FSDirectory.open(Path.of(indexPath));
         StandardAnalyzer analyzer = new StandardAnalyzer();
@@ -23,6 +31,11 @@ public class PDFIndexer {
         writer = new IndexWriter(directory, config);
     }
 
+    /**
+     * Add a document to index.
+     *
+     * @param pdfDoc The pdf document to add.
+     */
     public void addDocument(PDFDoc pdfDoc) throws IOException {
         Document document = new Document();
         document.add(new TextField("title", pdfDoc.getTitle(), Field.Store.YES));
@@ -33,6 +46,9 @@ public class PDFIndexer {
         writer.addDocument(document);
     }
 
+    /**
+     * Close the indexer.
+     */
     public void close() throws IOException {
         writer.close();
     }

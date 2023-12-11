@@ -145,6 +145,7 @@
 #set par(
   leading: 10pt,
   first-line-indent: 2em,
+  justify: true
 )
 
 #show parbreak: {
@@ -168,6 +169,7 @@
 
 #set figure(
   supplement: "图",
+  gap: 1em
 )
 #set figure.caption(separator: "  ")
 #show figure.caption: it => {
@@ -176,6 +178,11 @@
     size: 10.5pt,
     weight: "bold",
   )[#it]
+}
+
+#show figure: it => {
+  it
+  fake-par
 }
 
 #show raw: it => {
@@ -233,7 +240,7 @@
 程序的主要模块如@系统模块架构图 所示。
 
 #figure(
-  image("assets/structure.svg", width: 80%),
+  image("assets/structure.png", width: 80%),
   caption: "系统模块架构图"
 ) <系统模块架构图>
 
@@ -242,7 +249,7 @@
 程序总体流程图如@总体流程图 所示。
 
 #figure(
-  image("assets/flowchart.svg", width: 80%),
+  image("assets/flowchart.png", width: 80%),
   caption: "总体流程图"
 ) <总体流程图>
 
@@ -261,7 +268,7 @@
 爬虫模块流程如@爬虫模块流程图 所示。
 
 #figure(
-  image("assets/crawler.svg", height: 50%),
+  image("assets/crawler.png", height: 45%),
   caption: "爬虫模块流程图"
 ) <爬虫模块流程图>
 
@@ -274,7 +281,7 @@ PDF 文件解析模块主要负责解析爬取到的 PDF 文件，提取出论�
 解析模块流程如@解析模块流程图 所示。
 
 #figure(
-  image("assets/parser.svg", height: 40%),
+  image("assets/parser.png", height: 35%),
   caption: "解析模块流程图"
 ) <解析模块流程图>
 
@@ -292,7 +299,7 @@ PDF 文件解析模块主要负责解析爬取到的 PDF 文件，提取出论�
 索引模块流程如@索引模块流程图 所示。
 
 #figure(
-  image("assets/indexer.svg", height: 40%),
+  image("assets/indexer.png", height: 35%),
   caption: "索引模块流程图"
 ) <索引模块流程图>
 
@@ -314,7 +321,7 @@ PDF 文件解析模块主要负责解析爬取到的 PDF 文件，提取出论�
 检索模块流程如@检索模块流程图 所示。
 
 #figure(
-  image("assets/searcher.svg", height: 40%),
+  image("assets/searcher.png", height: 40%),
   caption: "检索模块流程图"
 ) <检索模块流程图>
 
@@ -331,6 +338,79 @@ PDF解析和索引构建模块也经过了严格测试。测试中发现PDF解�
 总体来说，尽管在测试过程中遇到了一些挑战和问题，但通过团队的共同努力，大部分问题都得到了解决，使得整个系统在功能和性能上都达到了预期目标。但还有一些细节需要在未来的迭代中进一步完善和优化。
 
 == 程序运行
+
+由于索引和检索模块通常不一起运行，因此我们采用命令行参数来区分两个模块。在命令行中，用户可以通过 `index` 和 `search` 来分别运行索引和检索模块。
+
+=== 索引模块
+
+使用 `java -jar ScholarSearchEngine.jar index` 命令来运行索引模块。在运行时，程序会提示用户输入爬取的网页数量和爬取的网页深度。程序会自动爬取 arxiv 上的论文网页和 PDF 文件，并将解析到的信息建立索引。索引文件会保存在 `data/index` 目录下。在创建索引过程中，程序会自动在控制台输出一些日志。在索引结束时，程序会提示用户索引的文档数量。
+
+例如，在本次作业一起提交的索引后的文件使用的是 `java -jar ScholarSearchEngine.jar index` 命令生成的，最终打印的日志中说明了总共索引的文档数量为 956，如@索引模块运行示例 所示。
+
+#figure(
+  image("assets/2023-12-11-22-13-35.png", width: 80%),
+  caption: "索引模块运行示例"
+) <索引模块运行示例>
+
+=== 检索模块
+
+使用 `java -jar ScholarSearchEngine.jar search` 命令来运行检索模块。在运行时，程序会提示用户输入检索的关键词。程序会自动在索引中检索关键词，并将检索结果打印到命令行中。
+
+在打开程序后，程序会在控制台输出以下欢迎信息：
+
+#figure(
+  image("assets/2023-12-11-22-13-15.png", width: 80%),
+  caption: "",
+)
+
+用户可以通过输入 `help` 来查看帮助信息，如@帮助信息 所示。
+
+#figure(
+  image("assets/2023-12-11-22-15-32.png", width: 60%),
+  caption: "帮助信息"
+) <帮助信息>
+
+用户可以通过输入 `author`、`title`、`abstract`、`text` 来指定检索的字段。例如，用户可以通过输入 `author Yann` 来检索作者中含有 `Yann` 的论文，如@检索作者运行示例 所示。
+
+#figure(
+  image("assets/2023-12-11-20-47-47.png", width: 95%),
+  caption: "检索作者运行示例"
+) <检索作者运行示例>
+
+用户可以通过输入 `title 4d` 来检索标题中含有 `4d` 的论文，如@检索标题运行示例 所示。
+
+#figure(
+  image("assets/2023-12-11-20-49-42.png", width: 80%),
+  caption: "检索标题运行示例"
+) <检索标题运行示例>
+
+用户可以通过输入 `abstract nerf` 来检索摘要中含有 `nerf` 的论文，如@检索摘要运行示例 所示。
+
+#figure(
+  image("assets/2023-12-11-20-53-17.png", width: 100%),
+  caption: "检索摘要运行示例"
+) <检索摘要运行示例>
+
+用户可以通过输入 `text "3d gaussian"` 来检索正文中含有 `3d gaussian` 的论文，如@检索正文运行示例 所示。
+
+#figure(
+  image("assets/2023-12-11-22-00-28.png", width: 80%),
+  caption: "检索正文运行示例"
+) <检索正文运行示例>
+
+除此之外，Apache Lucene 还支持更多的检索功能，例如模糊检索、通配符检索、范围检索等等#footnote[https://lucene.apache.org/core/9_9_0/queryparser/org/apache/lucene/queryparser/classic/package-summary.html]，我们可以利用这些功能达到一些更加复杂的检索需求，例如想要检索标题中含有 editable 或 3d gaussian 的 Guosheng Lin 的论文，如@检索标题复杂运行示例 所示。
+
+#figure(
+  image("assets/2023-12-11-21-56-50.png", width: 100%),
+  caption: "检索标题复杂运行示例"
+) <检索标题复杂运行示例>
+
+由于 Apache Lucene 的检索功能十分强大，我们可以通过不同的检索方式来满足不同的检索需求。而用户输入的第一个提示词只决定了默认的检索字段，用户可以通过输入其他提示词来指定检索字段，从而实现更加精准的检索。通过输入 `tips`，用户可以查看 Apache Lucene 支持的部分检索规则，如@检索提示词运行示例 所示。
+
+#figure(
+  image("assets/2023-12-11-22-20-03.png", width: 85%),
+  caption: "检索提示词运行示例"
+) <检索提示词运行示例>
 
 = 总结
 
