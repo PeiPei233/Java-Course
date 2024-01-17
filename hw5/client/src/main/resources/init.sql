@@ -6,9 +6,3 @@ CREATE TABLE IF NOT EXISTS messages
     isRoom    INTEGER not null,
     timestamp INTEGER not null
 );
-
-CREATE TABLE IF NOT EXISTS contact
-(
-    name   TEXT,
-    isRoom INTEGER
-);

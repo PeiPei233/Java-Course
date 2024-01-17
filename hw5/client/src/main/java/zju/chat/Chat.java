@@ -275,7 +275,12 @@ public class Chat extends JFrame {
                         quitRoomButton.setVisible(false);
                     }
                     titleLabel.setText(newContactTitle);
-                    var messages = client.getMessages(currentContact);
+                    Vector<Message> messages = null;
+                    try {
+                        messages = client.getMessages(currentContact);
+                    } catch (Exception ex) {
+                        JOptionPane.showMessageDialog(this, "Fail to get messages: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
 
                     if (currentContact != null) {
                         if (originContact == null || !originContact.equals(currentContact)) {

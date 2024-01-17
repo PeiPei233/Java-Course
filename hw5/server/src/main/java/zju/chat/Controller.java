@@ -42,7 +42,7 @@ public class Controller extends Thread {
                     switch (request.getCommand()) {
                         case "login": {
                             UserInfoBody body = (UserInfoBody) request.getPayload();
-                            login(body);
+                            payload = login(body);
                             break;
                         }
                         case "register": {
@@ -126,13 +126,16 @@ public class Controller extends Thread {
         System.out.println("Sent response: " + response);
     }
 
-    private void login(UserInfoBody body) throws Exception {
+    private Vector<Message> login(UserInfoBody body) throws Exception {
         if (username != null || sessionService.hasSession(body.getUsername())) {
             throw new Exception("Already logged in");
         }
         accountService.validateUser(body.getUsername(), body.getPassword());
         username = body.getUsername();
         sessionService.addSession(body.getUsername(), this);
+
+        // get offline messages
+        return messageService.getOfflineMessages(username);
     }
 
 }

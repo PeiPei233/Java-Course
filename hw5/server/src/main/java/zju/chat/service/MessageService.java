@@ -23,7 +23,7 @@ public class MessageService {
                 if (!member.equals(username)) {
                     Controller controller = sessionService.getSession(member);
                     if (controller == null) {
-                        System.err.println("Failed to get controller");
+                        mapper.saveMessage(member, message);
                         continue;
                     }
                     controller.send("message", "success", message);
@@ -37,11 +37,14 @@ public class MessageService {
             }
             Controller controller = sessionService.getSession(opposite);
             if (controller == null) {
-                System.err.println("Failed to get controller");
+                mapper.saveMessage(opposite, message);
                 return;
             }
             controller.send("message", "success", message);
         }
     }
 
+    public Vector<Message> getOfflineMessages(String username) throws Exception {
+        return mapper.getMessages(username);
+    }
 }

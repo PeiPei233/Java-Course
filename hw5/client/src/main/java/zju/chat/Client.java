@@ -16,9 +16,7 @@ import java.net.*;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
 import java.util.Vector;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 @Getter
 @Setter
@@ -30,6 +28,9 @@ public class Client {
     private final Socket socket;
     private final ObjectInputStream in;
     private final ObjectOutputStream out;
+    private final Mapper mapper;
+    private long startTimestamp;
+    private final ScheduledExecutorService scheduler;
     private CompletableFuture<ChatResponse> loginFuture;
     private CompletableFuture<ChatResponse> sendFuture;
     private CompletableFuture<ChatResponse> roomMembersFuture;
@@ -84,6 +85,7 @@ public class Client {
                     loginFuture.complete(response);
                 }
             }
+            logout();
         }
     }
 
@@ -95,6 +97,7 @@ public class Client {
         in = new ObjectInputStream(socket.getInputStream());
         this.username = username;
         new Receiver().start();
+        startTimestamp = System.currentTimeMillis();
 
         // send login
         loginFuture = new CompletableFuture<>();
@@ -107,17 +110,32 @@ public class Client {
             }
         });
 
+        Vector<Message> offlineMessages = null;
+
         try {
             ChatResponse response = loginFuture.get();
             if (!response.getStatus().equals("success")) {
                 throw new Exception("login fail: " + response.getPayload());
             }
+            offlineMessages = (Vector<Message>) response.getPayload();
+            mapper = new Mapper(username);
+            mapper.saveMessages(offlineMessages);
         } catch (Exception e) {
             in.close();
             out.close();
             socket.close();
             throw e;
         }
+
+        scheduler = Executors.newScheduledThreadPool(1);
+
+        scheduler.scheduleWithFixedDelay(() -> {
+            try {
+                concurrentDatabase();
+            } catch (Exception e) {
+                System.err.println("Failed to concurrent database: " + e.getMessage());
+            }
+        }, 1, 5, TimeUnit.MINUTES);
     }
 
     public static void login(String username, String password, String server) throws Exception {
@@ -207,18 +225,23 @@ public class Client {
         out.flush();
     }
 
-    public Vector<Message> getMessages(String contact) {
-        return messages.get(contact);
+    public Vector<Message> getMessages(String contact) throws Exception {
+        if (messages.containsKey(contact)) {
+            return messages.get(contact);
+        } else {
+            Vector<Message> messages = mapper.getMessages(contact);
+            this.messages.put(contact, messages);
+            return messages;
+        }
     }
 
     public Vector<Message> getContacts() {
-        Vector<Message> contacts = new Vector<>();
-        for (String contact : messages.keySet()) {
-            contacts.add(messages.get(contact).lastElement());
+        try {
+            return mapper.getContacts();
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            return new Vector<>();
         }
-        // sort by descending order of millis timestamp
-        contacts.sort((o1, o2) -> (int) (o2.getTimestamp() - o1.getTimestamp()));
-        return contacts;
     }
 
     public void sendMessage(String contact, String content, boolean isRoom) throws Exception {
@@ -236,8 +259,12 @@ public class Client {
 
     public void addContact(String contact, boolean isRoom) {
         // if the contact has already existed, do nothing
-        if (messages.containsKey(contact)) {
-            return;
+        try {
+            mapper.checkContact(contact);
+            JOptionPane.showMessageDialog(chat, "Contact already exists", "Info", JOptionPane.INFORMATION_MESSAGE);
+        } catch (NoSuchElementException ignored) {
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(chat, "Add contact fail", "Error", JOptionPane.ERROR_MESSAGE);
         }
         if (isRoom) {
             try {
@@ -267,12 +294,6 @@ public class Client {
                 JOptionPane.showMessageDialog(chat, "Failed to join room: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         } else {
-            // check if the user is himself
-//            if (contact.equals(this.username)) {
-//                JOptionPane.showMessageDialog(chat, "Cannot add contact to yourself", "Error", JOptionPane.ERROR_MESSAGE);
-//                return;
-//            }
-
             // check if the user exists
             try {
                 checkUser(contact);
@@ -302,14 +323,6 @@ public class Client {
             throw new Exception("Failed to get room members: " + response.getPayload().toString());
         }
         return (Vector<String>) response.getPayload();
-    }
-
-    public void logout() {
-        try {
-            socket.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     public void quitRoom(String room) throws Exception {
@@ -391,6 +404,30 @@ public class Client {
         ChatResponse response = checkUserFuture.get();
         if (!response.getStatus().equals("success")) {
             throw new Exception((String) response.getPayload());
+        }
+    }
+
+    private void concurrentDatabase() throws Exception {
+        long lastTimestamp = startTimestamp;
+        startTimestamp = System.currentTimeMillis();
+        mapper.concurrent(messages, lastTimestamp);
+    }
+
+    public void logout() {
+        if (mapper != null) {
+            try {
+                concurrentDatabase();
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(chat, "Failed to concurrent database: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+        if (scheduler != null) {
+            scheduler.shutdown();
+        }
+        try {
+            socket.close();
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(chat, "Failed to close socket: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
