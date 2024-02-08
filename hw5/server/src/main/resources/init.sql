@@ -20,7 +20,7 @@ create table if not exists room
 
 create table if not exists save_messages
 (
-    username  text                          null,
+    username  text                          not null,
     `from`    text                          not null,
     `to`      text                          not null,
     content   text collate utf32_unicode_ci not null,

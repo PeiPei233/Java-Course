@@ -19,21 +19,54 @@ import java.util.Vector;
 
 import static zju.chat.Style.*;
 
+
+/**
+ * Chat: chat window
+ */
 public class Chat extends JFrame {
 
+    /**
+     * The client that this chat window belongs to.
+     */
     private final Client client;
+
+    /**
+     * The list model of the contacts.
+     */
     private final DefaultListModel<Message> contacts = new DefaultListModel<>();
+
+    /**
+     * The current contact that is being chatted with.
+     */
     @Getter
     private String currentContact = null;
+
+    /**
+     * Whether the current contact is a room.
+     */
     @Getter
     private boolean isRoom = false;
+
+    /**
+     * The style document of the message display.
+     */
     private StyledDocument messageDoc;
+
+    /**
+     * The style of the message from me.
+     */
     private JList<Message> contactList;
 
+    /**
+     * Constructor of Chat.
+     *
+     * @param client the client that this chat window belongs to
+     */
     public Chat(Client client) {
-        super(client.getUsername());
+        super(client.getUsername());        // set the title of the window to the username
         this.client = client;
         setMinimumSize(new Dimension(800, 600));
+        // logout when the window is closed
         setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             @Override
@@ -43,23 +76,30 @@ public class Chat extends JFrame {
             }
         });
 
+        // get contacts
         for (Message message : client.getContacts()) {
             contacts.addElement(message);
         }
 
+        // create window components
         createUI();
 
         setLocationRelativeTo(null);
         setVisible(true);
     }
 
+    /**
+     * Create the UI of the chat window.
+     */
     void createUI() {
 
+        // the add contact panel
         JPanel addContactPanel = new JPanel();
         addContactPanel.setLayout(new BoxLayout(addContactPanel, BoxLayout.X_AXIS));
         addContactPanel.setBackground(Color.WHITE);
         addContactPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // the contact combo box used to select the type of the contact
         JComboBox<String> contactComboBox = new ZComboBox<>();
         contactComboBox.setEditable(false);
         contactComboBox.setFont(Style.font);
@@ -68,9 +108,12 @@ public class Chat extends JFrame {
         contactComboBox.addItem("Room");
         contactComboBox.setMaximumSize(new Dimension(100, contactComboBox.getPreferredSize().height));
 
+        // the contact field used to input the name of the contact
         JTextField contactField = new ZTextField();
         contactField.setMaximumSize(new Dimension(Integer.MAX_VALUE, contactComboBox.getPreferredSize().height));
         contactField.setMinimumSize(new Dimension(50, contactComboBox.getPreferredSize().height));
+
+        // the add button used to add the contact
         JButton addButton = new ZButton("Add", ZButton.Type.PRIMARY);
         addButton.setMaximumSize(new Dimension(50, contactComboBox.getPreferredSize().height));
 
@@ -79,10 +122,11 @@ public class Chat extends JFrame {
         addContactPanel.add(contactField);
         addContactPanel.add(Box.createHorizontalStrut(10));
         addContactPanel.add(addButton);
-
         addContactPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, addContactPanel.getPreferredSize().height));
 
+        // the contact list
         contactList = new JList<>(contacts);
+        // set the cell renderer of the contact list
         contactList.setCellRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value,
@@ -96,22 +140,28 @@ public class Chat extends JFrame {
                 } else {
                     panel.setBackground(Color.WHITE);
                 }
+                // the top panel contains the username and the timestamp
                 JPanel topPanel = new JPanel();
                 topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.X_AXIS));
                 topPanel.setBackground(panel.getBackground());
                 String time = timestampToString(message.getTimestamp());
-                FontMetrics fm = getFontMetrics(Style.font);
 
+                // truncate text to fit the width of the list
+                FontMetrics fm = getFontMetrics(Style.font);
                 int maxUsernameWidth = list.getWidth() - fm.stringWidth(time) - getInsets().left - getInsets().right - 20;
                 String truncatedUsername = truncateText(fm, username, maxUsernameWidth);
+
                 topPanel.add(new ZLabel(truncatedUsername));
                 topPanel.add(Box.createHorizontalGlue());
                 topPanel.add(new ZLabel(time, ZLabel.Type.SECONDARY));
                 panel.add(topPanel);
+
+                // the bottom panel contains the truncated content of the message
                 JPanel messagePanel = new JPanel();
                 messagePanel.setLayout(new BoxLayout(messagePanel, BoxLayout.X_AXIS));
                 messagePanel.setBackground(panel.getBackground());
 
+                // truncate text to fit the width of the list
                 int maxContentWidth = list.getWidth() - getInsets().left - getInsets().right - 20;
                 String content = message.getContent();
                 if (message.isRoom() && message.getFrom() != null && !message.getFrom().equals(client.getUsername())) {
@@ -127,10 +177,13 @@ public class Chat extends JFrame {
                 return panel;
             }
         });
+
+        // the scroll pane of the contact list
         JScrollPane contactListScrollPane = new JScrollPane(contactList);
         contactListScrollPane.setBackground(Color.WHITE);
         contactListScrollPane.setMinimumSize(new Dimension(120, contactListScrollPane.getPreferredSize().height));
 
+        // the panel of the contact list
         JPanel contactListPanel = new JPanel();
         contactListPanel.setLayout(new BoxLayout(contactListPanel, BoxLayout.Y_AXIS));
         contactListPanel.setBackground(Color.WHITE);
@@ -138,31 +191,41 @@ public class Chat extends JFrame {
         contactListPanel.add(addContactPanel);
         contactListPanel.add(contactListScrollPane);
 
+        // the message display text pane
         JTextPane messagePane = new JTextPane();
         messagePane.setEditable(false);
+        messagePane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         messageDoc = messagePane.getStyledDocument();
 
+        // the message display scroll pane
         JScrollPane messageDisplayPanel = new JScrollPane(messagePane);
         messageDisplayPanel.setBackground(Color.WHITE);
-        messageDisplayPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // the input panel
         JPanel inputPanel = new JPanel();
         inputPanel.setLayout(new BoxLayout(inputPanel, BoxLayout.Y_AXIS));
         inputPanel.setBackground(Color.WHITE);
         inputPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // the input text pane
         JTextPane inputPane = new JTextPane();
         inputPane.setFont(Style.font);
         inputPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         inputPane.setEditable(false);
+
+        // the input scroll pane
         JScrollPane inputScrollPane = new JScrollPane(inputPane);
         inputScrollPane.setBackground(Color.WHITE);
         inputScrollPane.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
         inputScrollPane.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
         inputPanel.add(inputScrollPane);
+
+        // the send button
         JButton sendButton = new ZButton("Send", ZButton.Type.PRIMARY);
         sendButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
         sendButton.setMinimumSize(new Dimension(0, sendButton.getPreferredSize().height));
+
+        // the send button panel contains the send button and the horizontal glue
         JPanel sendButtonPanel = new JPanel();
         sendButtonPanel.setLayout(new BoxLayout(sendButtonPanel, BoxLayout.X_AXIS));
         sendButtonPanel.setBackground(Color.WHITE);
@@ -171,6 +234,7 @@ public class Chat extends JFrame {
         sendButtonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, sendButtonPanel.getPreferredSize().height));
         inputPanel.add(sendButtonPanel);
 
+        // the list of room members
         JList<String> roomMemberList = new JList<>(new Vector<>());
         roomMemberList.setCellRenderer(new DefaultListCellRenderer() {
             @Override
@@ -193,12 +257,18 @@ public class Chat extends JFrame {
                 return panel;
             }
         });
+
+        // the scroll pane of the room member list
         JScrollPane roomMemberListScrollPane = new JScrollPane(roomMemberList);
         roomMemberListScrollPane.setBackground(Color.WHITE);
+
+        // the panel of the room member list
         JPanel roomMemberListPanel = new JPanel();
         roomMemberListPanel.setLayout(new BoxLayout(roomMemberListPanel, BoxLayout.Y_AXIS));
         roomMemberListPanel.setBackground(Color.WHITE);
         roomMemberListPanel.setBorder(null);
+
+        // the label of the room member list
         JLabel roomMemberListLabel = new ZLabel("Room Members");
         roomMemberListLabel.setBackground(Color.WHITE);
         roomMemberListLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -206,27 +276,33 @@ public class Chat extends JFrame {
         roomMemberListPanel.add(roomMemberListScrollPane);
         roomMemberListPanel.setVisible(false);
 
+        // the panel of the message display
         JPanel messagePanel = new JPanel();
         messagePanel.setLayout(new BorderLayout());
         messagePanel.setBackground(Color.WHITE);
 
+        // the split panel of the message display and the room member list
         JSplitPane messageSplitPanel = new JSplitPane(JSplitPane.VERTICAL_SPLIT, messageDisplayPanel, inputPanel);
         messageSplitPanel.setResizeWeight(0.8);
 
+        // the split panel of the contact list and the message display
         JSplitPane roomSplitPanel = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, messageSplitPanel, roomMemberListPanel);
         roomSplitPanel.setResizeWeight(0.8);
         roomSplitPanel.addPropertyChangeListener(e -> {
             roomMemberList.repaint();
         });
 
+        // the title label of the message display
         JLabel titleLabel = new ZLabel("No Contact");
         titleLabel.setFont(Style.font.deriveFont(Font.PLAIN, 20));
         titleLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
+        // the quit room button
         JLabel quitRoomButton = new ZLabel("Quit Room", ZLabel.Type.LINK);
         quitRoomButton.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         quitRoomButton.setVisible(false);
 
+        // the title panel of the message display contains the title label and the quit room button
         JPanel titlePanel = new JPanel();
         titlePanel.setLayout(new BoxLayout(titlePanel, BoxLayout.X_AXIS));
         titlePanel.setBackground(Color.WHITE);
@@ -237,6 +313,7 @@ public class Chat extends JFrame {
         messagePanel.add(titlePanel, BorderLayout.NORTH);
         messagePanel.add(roomSplitPanel, BorderLayout.CENTER);
 
+        // the split panel of the contact list and the message display
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, contactListPanel, messagePanel);
         splitPane.setResizeWeight(0.2);
         splitPane.setOneTouchExpandable(true);
@@ -244,11 +321,14 @@ public class Chat extends JFrame {
             contactList.repaint();
         });
 
+        // set the content pane of the window
         setContentPane(splitPane);
 
+        // select the contact when the contact list is clicked
         contactList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 Message selectedMessage = contactList.getSelectedValue();
+                // get the selected contact and update the message display
                 if (selectedMessage != null) {
                     String originContact = currentContact;
                     boolean originIsRoom = isRoom;
@@ -340,6 +420,8 @@ public class Chat extends JFrame {
             }
         });
 
+        // use enter to send message
+        // use shift + enter to insert a new line
         inputPane.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -361,6 +443,7 @@ public class Chat extends JFrame {
             }
         });
 
+        // send message when the send button is clicked
         sendButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -376,6 +459,7 @@ public class Chat extends JFrame {
             }
         });
 
+        // add contact when the add button is clicked or the enter key is pressed
         ActionListener addContactListener = e -> {
             String contact = contactField.getText();
             if (!contact.isEmpty()) {
@@ -402,6 +486,7 @@ public class Chat extends JFrame {
         addButton.addActionListener(addContactListener);
         contactField.addActionListener(addContactListener);
 
+        // quit room when the quit room button is clicked
         quitRoomButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -416,6 +501,11 @@ public class Chat extends JFrame {
 
     }
 
+    /**
+     * Add a message to the chat window.
+     *
+     * @param message the message to be added
+     */
     public void addMessage(Message message) {
         if (currentContact != null && currentContact.equals(message.getOpposite(client.getUsername()))) {
             appendMessage(message);
@@ -425,6 +515,7 @@ public class Chat extends JFrame {
             }
         }
 
+        // move the contact to the top
         String selectedContact = currentContact;
         for (int i = 0; i < contacts.size(); i++) {
             Message contact = contacts.get(i);
@@ -445,6 +536,11 @@ public class Chat extends JFrame {
         }
     }
 
+    /**
+     * Append a message to the message display.
+     *
+     * @param message the message to be appended
+     */
     private void appendMessage(Message message) {
         try {
             int start = messageDoc.getLength();
@@ -462,6 +558,12 @@ public class Chat extends JFrame {
         }
     }
 
+    /**
+     * Convert a timestamp to a string.
+     *
+     * @param timestamp the timestamp in milliseconds to be converted
+     * @return the string representation of the timestamp
+     */
     String timestampToString(long timestamp) {
         Calendar calendar = Calendar.getInstance();
         calendar.setTime(new Date(timestamp));
@@ -478,6 +580,14 @@ public class Chat extends JFrame {
     }
 
 
+    /**
+     * Truncate text to fit the width of the list.
+     *
+     * @param fm       the font metrics of the font
+     * @param text     the text to be truncated
+     * @param maxWidth the maximum width of the text
+     * @return the truncated text
+     */
     String truncateText(FontMetrics fm, String text, int maxWidth) {
         if (fm.stringWidth(text) > maxWidth) {
             String ellipsis = "...";

@@ -6,33 +6,63 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
+import java.util.Objects;
 
 import static zju.chat.Style.BORDER_RADIUS;
 
+/**
+ * ZComboBox: the custom combo box of the program
+ *
+ * @param <E> the content type of the combo box
+ */
 public class ZComboBox<E> extends JComboBox<E> {
 
-    private Color borderColor = new Color(222, 226, 230);
+    /**
+     * The border color of the combo box.
+     */
+    private final Color borderColor = new Color(222, 226, 230);
 
+    /**
+     * Constructor
+     */
     public ZComboBox() {
         super();
         setStyle();
     }
 
+    /**
+     * Constructor
+     *
+     * @param items the items of the combo box
+     */
     public ZComboBox(E[] items) {
         super(items);
         setStyle();
     }
 
+    /**
+     * Constructor
+     *
+     * @param aModel the combo box model
+     */
     public ZComboBox(ComboBoxModel<E> aModel) {
         super(aModel);
         setStyle();
     }
 
+    /**
+     * Constructor
+     *
+     * @param items the items of the combo box
+     */
     public ZComboBox(java.util.Vector<E> items) {
         super(items);
         setStyle();
     }
 
+    /**
+     * Set the style of the combo box.
+     */
     private void setStyle() {
         setFont(Style.font);
         setEditable(false);
@@ -40,6 +70,11 @@ public class ZComboBox<E> extends JComboBox<E> {
         setBorder(new EmptyBorder(5, 10, 5, 10));
     }
 
+    /**
+     * Set the border color of the combo box.
+     *
+     * @param g the <code>Graphics</code> object to protect
+     */
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D) g.create();
@@ -51,12 +86,17 @@ public class ZComboBox<E> extends JComboBox<E> {
 
         // draw the selected text
         g2d.setColor(getForeground());
-        g2d.drawString(getSelectedItem().toString(), 10, (getHeight() + getFont().getSize()) / 2);
+        g2d.drawString(Objects.requireNonNull(getSelectedItem()).toString(), 10, (getHeight() + getFont().getSize()) / 2);
 
 //        super.paintComponent(g);
         g2d.dispose();
     }
 
+    /**
+     * Set the border color of the combo box.
+     *
+     * @param g the <code>Graphics</code> context in which to paint
+     */
     @Override
     protected void paintBorder(Graphics g) {
         Graphics2D g2d = (Graphics2D) g.create();

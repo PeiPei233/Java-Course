@@ -14,8 +14,8 @@ import java.util.stream.Collectors;
 
 public class Mapper {
 
-    Connection connection;
     private final String username;
+    Connection connection;
 
 
     Mapper(String username) throws SQLException {
@@ -26,7 +26,7 @@ public class Mapper {
         assert is != null;
         String initContent = new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"));
         String[] initStatements = initContent.split(";");
-        for (String sql: initStatements) {
+        for (String sql : initStatements) {
             if (sql.trim().isEmpty()) {
                 continue;
             }
@@ -73,7 +73,6 @@ public class Mapper {
                                                              ELSE "from"
                                                          END ORDER BY timestamp DESC) as rank
                     FROM messages
-                    WHERE ? IN ("from", "to")
                 )
                 SELECT * FROM RankedMessages
                 WHERE rank = 1
@@ -82,7 +81,6 @@ public class Mapper {
         PreparedStatement statement = connection.prepareStatement(sql);
         statement.setString(1, username);
         statement.setString(2, username);
-        statement.setString(3, username);
         ResultSet resultSet = statement.executeQuery();
         while (resultSet.next()) {
             Message message = new Message();
@@ -106,13 +104,13 @@ public class Mapper {
         }
     }
 
-    public void concurrent(HashMap<String, Vector<Message>> messages, long startTimestamp) throws SQLException {
+    public void concurrent(HashMap<String, Vector<Message>> messages, long startTimestamp, long endTimestamp) throws SQLException {
         connection.setAutoCommit(false);
         try {
             PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (\"from\", \"to\", content, isRoom, timestamp) VALUES (?, ?, ?, ?, ?)");
-            for (String contact: messages.keySet()) {
-                for (Message message: messages.get(contact)) {
-                    if (message.getTimestamp() < startTimestamp) {
+            for (String contact : messages.keySet()) {
+                for (Message message : messages.get(contact)) {
+                    if (message.getTimestamp() < startTimestamp || message.getTimestamp() > endTimestamp) {
                         continue;
                     }
                     statement.setString(1, message.getFrom());
@@ -137,7 +135,7 @@ public class Mapper {
         connection.setAutoCommit(false);
         try {
             PreparedStatement statement = connection.prepareStatement("INSERT INTO messages (\"from\", \"to\", content, isRoom, timestamp) VALUES (?, ?, ?, ?, ?)");
-            for (Message message: messages) {
+            for (Message message : messages) {
                 statement.setString(1, message.getFrom());
                 statement.setString(2, message.getTo());
                 statement.setString(3, message.getContent());
@@ -152,6 +150,16 @@ public class Mapper {
             e.printStackTrace();
         } finally {
             connection.setAutoCommit(true);
+        }
+    }
+
+    public void deleteRoom(String room) {
+        try {
+            PreparedStatement statement = connection.prepareStatement("DELETE FROM messages WHERE \"to\" = ? AND isRoom = 1");
+            statement.setString(1, room);
+            statement.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 }

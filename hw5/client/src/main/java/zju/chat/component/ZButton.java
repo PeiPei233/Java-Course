@@ -7,14 +7,21 @@ import java.awt.*;
 
 import static zju.chat.Style.BORDER_RADIUS;
 
+/**
+ * ZButton: the custom button of the program
+ */
 public class ZButton extends JButton {
 
+    /**
+     * The border color of the button.
+     */
     private Color borderColor = null;
 
-    public static enum Type {
-        PRIMARY, SECONDARY, SUCCESS, DANGER, WARNING, INFO, LIGHT, DARK, LINK
-    }
-
+    /**
+     * Constructor
+     *
+     * @param text the text of the button
+     */
     public ZButton(String text) {
         super(text);
         setOpaque(false);
@@ -28,6 +35,12 @@ public class ZButton extends JButton {
         borderColor = new Color(222, 226, 230);
     }
 
+    /**
+     * Constructor
+     *
+     * @param text the text of the button
+     * @param type the type of the button
+     */
     public ZButton(String text, Type type) {
         this(text);
         switch (type) {
@@ -79,9 +92,14 @@ public class ZButton extends JButton {
         }
     }
 
+    /**
+     * paint the component
+     *
+     * @param g the <code>Graphics</code> object to protect
+     */
     @Override
     protected void paintComponent(Graphics g) {
-        Graphics2D g2d = (Graphics2D)g.create();
+        Graphics2D g2d = (Graphics2D) g.create();
 
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
@@ -106,6 +124,13 @@ public class ZButton extends JButton {
 
         g2d.dispose();
         super.paintComponent(g);
+    }
+
+    /**
+     * The type of the button.
+     */
+    public enum Type {
+        PRIMARY, SECONDARY, SUCCESS, DANGER, WARNING, INFO, LIGHT, DARK, LINK
     }
 
 }

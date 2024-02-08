@@ -1,6 +1,9 @@
 package zju.chat;
 
-import zju.chat.component.*;
+import zju.chat.component.ZButton;
+import zju.chat.component.ZLabel;
+import zju.chat.component.ZPasswordField;
+import zju.chat.component.ZTextField;
 
 import javax.swing.*;
 import java.awt.*;
@@ -28,6 +31,13 @@ public class Index extends JFrame {
         setVisible(true);
     }
 
+    /**
+     * create a form item panel
+     *
+     * @param label the label
+     * @param field the field
+     * @return the form item panel
+     */
     JPanel createFormItemPanel(JComponent label, JComponent field) {
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
@@ -40,16 +50,21 @@ public class Index extends JFrame {
         return panel;
     }
 
+    /**
+     * create the login panel
+     */
     void createLoginPanel() {
         loginPanel = new JPanel();
         loginPanel.setLayout(new BoxLayout(loginPanel, BoxLayout.Y_AXIS));
         loginPanel.setBackground(Color.WHITE);
         loginPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
 
+        // title
         JLabel titleLabel = new ZLabel("Chat-Java");
         titleLabel.setFont(Style.font.deriveFont(Font.PLAIN, 30));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // form
         JLabel usernameLabel = new ZLabel("Username:");
         JTextField usernameField = new ZTextField();
         JLabel passwordLabel = new ZLabel("Password:");
@@ -62,11 +77,13 @@ public class Index extends JFrame {
         JButton registerButton = new ZButton("To Register", ZButton.Type.PRIMARY);
         registerButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, registerButton.getPreferredSize().height));
 
+        // footer
         JLabel footerLabel = new ZLabel("Developed by PeiPei, Zhejiang University");
         footerLabel.setFont(Style.font.deriveFont(Font.PLAIN, 12));
         footerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         footerLabel.setForeground(new Color(108, 117, 125));
 
+        // add components
         JPanel usernamePanel = createFormItemPanel(usernameLabel, usernameField);
         JPanel passwordPanel = createFormItemPanel(passwordLabel, passwordField);
         JPanel serverPanel = createFormItemPanel(serverLabel, serverField);
@@ -85,11 +102,13 @@ public class Index extends JFrame {
         loginPanel.add(Box.createVerticalStrut(30));
         loginPanel.add(footerLabel);
 
+        // change to register panel
         registerButton.addActionListener(e -> {
             setContentPane(registerPanel);
             revalidate();
         });
 
+        // login action
         ActionListener loginActionListener = e -> {
             String username = usernameField.getText();
             String password = new String(passwordField.getPassword());
@@ -111,16 +130,21 @@ public class Index extends JFrame {
         serverField.addActionListener(loginActionListener);
     }
 
+    /**
+     * create the register panel
+     */
     void createRegisterPanel() {
         registerPanel = new JPanel();
         registerPanel.setLayout(new BoxLayout(registerPanel, BoxLayout.Y_AXIS));
         registerPanel.setBackground(Color.WHITE);
         registerPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
 
+        // title
         JLabel titleLabel = new ZLabel("Chat-Java");
         titleLabel.setFont(Style.font.deriveFont(Font.PLAIN, 30));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // form
         JLabel emailLabel = new ZLabel("Email:");
         JTextField emailField = new ZTextField();
         JLabel usernameLabel = new ZLabel("Username:");
@@ -137,11 +161,13 @@ public class Index extends JFrame {
         JButton registerButton = new ZButton("Register", ZButton.Type.PRIMARY);
         registerButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, registerButton.getPreferredSize().height));
 
+        // footer
         JLabel footerLabel = new ZLabel("Developed by PeiPei, Zhejiang University");
         footerLabel.setFont(Style.font.deriveFont(Font.PLAIN, 12));
         footerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         footerLabel.setForeground(new Color(108, 117, 125));
 
+        // add components
         JPanel emailPanel = createFormItemPanel(emailLabel, emailField);
         JPanel usernamePanel = createFormItemPanel(usernameLabel, usernameField);
         JPanel passwordPanel = createFormItemPanel(passwordLabel, passwordField);
@@ -166,11 +192,13 @@ public class Index extends JFrame {
         registerPanel.add(Box.createVerticalStrut(30));
         registerPanel.add(footerLabel);
 
+        // change to login panel
         loginButton.addActionListener(e -> {
             setContentPane(loginPanel);
             revalidate();
         });
 
+        // register action
         ActionListener registerActionListener = e -> {
             String email = emailField.getText();
             String username = usernameField.getText();

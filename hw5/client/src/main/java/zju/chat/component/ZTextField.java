@@ -9,10 +9,19 @@ import java.awt.geom.RoundRectangle2D;
 
 import static zju.chat.Style.BORDER_RADIUS;
 
+/**
+ * ZTextField: the custom text field of the program
+ */
 public class ZTextField extends JTextField {
 
-    private Color borderColor = new Color(222, 226, 230);
+    /**
+     * The border color of the text field.
+     */
+    private final Color borderColor = new Color(222, 226, 230);
 
+    /**
+     * Constructor
+     */
     public ZTextField() {
         super();
         setFont(Style.font);
@@ -20,6 +29,11 @@ public class ZTextField extends JTextField {
         setBorder(new EmptyBorder(5, 10, 5, 10));
     }
 
+    /**
+     * Constructor
+     *
+     * @param text the text of the text field
+     */
     public ZTextField(String text) {
         super(text);
         setFont(Style.font);
@@ -27,6 +41,11 @@ public class ZTextField extends JTextField {
         setBorder(new EmptyBorder(5, 10, 5, 10));
     }
 
+    /**
+     * paint the component
+     *
+     * @param g the <code>Graphics</code> object to protect
+     */
     @Override
     protected void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D) g.create();
@@ -40,6 +59,11 @@ public class ZTextField extends JTextField {
         g2d.dispose();
     }
 
+    /**
+     * paint the border
+     *
+     * @param g the <code>Graphics</code> context in which to paint
+     */
     @Override
     protected void paintBorder(Graphics g) {
         Graphics2D g2d = (Graphics2D) g.create();

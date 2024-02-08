@@ -14,22 +14,38 @@ import java.util.NoSuchElementException;
 import java.util.Vector;
 import java.util.stream.Collectors;
 
+/**
+ * Mapper for database
+ * Singleton
+ */
 public class Mapper {
 
+    /**
+     * Singleton
+     */
     @Getter
-    private static Mapper instance = new Mapper();
+    private static final Mapper instance = new Mapper();
 
+    /**
+     * Connection pool
+     */
     private final ConnectionPool connectionPool = ConnectionPool.getInstance();
 
+    /**
+     * Constructor
+     * Initialize connection pool
+     * Initialize database tables if not exist
+     */
     private Mapper() {
         Connection connection = null;
         try {
             connection = connectionPool.getConnection();
+            // get initialization sql statements from init.sql
             InputStream is = Mapper.class.getResourceAsStream("/init.sql");
             assert is != null;
             String initContent = new BufferedReader(new InputStreamReader(is)).lines().collect(Collectors.joining("\n"));
             String[] initStatements = initContent.split(";");
-            for (String sql: initStatements) {
+            for (String sql : initStatements) {
                 if (sql.trim().isEmpty()) {
                     continue;
                 }
@@ -46,6 +62,13 @@ public class Mapper {
         }
     }
 
+    /**
+     * Validate user by username and password
+     *
+     * @param username the username
+     * @param password the password
+     * @throws Exception if the username or the password is incorrect
+     */
     public void validateUser(String username, String password) throws Exception {
         Connection connection = null;
         try {
@@ -63,6 +86,14 @@ public class Mapper {
         }
     }
 
+    /**
+     * Register a user
+     *
+     * @param email    the email
+     * @param username the username
+     * @param password the password
+     * @throws Exception if the username or the email already exists
+     */
     public void register(String email, String username, String password) throws Exception {
         Connection connection = null;
         try {
@@ -107,6 +138,13 @@ public class Mapper {
         }
     }
 
+    /**
+     * Get the members of a room
+     *
+     * @param room the room name
+     * @return the members of the room
+     * @throws Exception if the operation fails
+     */
     public Vector<String> getRoomMembers(String room) throws Exception {
         Connection connection = null;
         Vector<String> roomMembers = new Vector<>();
@@ -129,6 +167,13 @@ public class Mapper {
         return roomMembers;
     }
 
+    /**
+     * Quit a room
+     *
+     * @param username the username of the user to quit the room
+     * @param room     the room name
+     * @throws Exception if the operation fails
+     */
     public void quitRoom(String username, String room) throws Exception {
         Connection connection = null;
         try {
@@ -148,6 +193,13 @@ public class Mapper {
         }
     }
 
+    /**
+     * Join a room
+     *
+     * @param username the username of the user to join the room
+     * @param room     the room name
+     * @throws Exception if the operation fails
+     */
     public void joinRoom(String username, String room) throws Exception {
         Connection connection = null;
         try {
@@ -176,6 +228,12 @@ public class Mapper {
         }
     }
 
+    /**
+     * Check if a room exists
+     *
+     * @param room the room name
+     * @throws Exception if the room does not exist
+     */
     public void checkRoom(String room) throws Exception {
         Connection connection = null;
         Vector<String> roomMembers = new Vector<>();
@@ -193,6 +251,12 @@ public class Mapper {
         }
     }
 
+    /**
+     * Check if a user exists
+     *
+     * @param username the username
+     * @throws Exception if the user does not exist
+     */
     public void checkUser(String username) throws Exception {
         Connection connection = null;
         Vector<String> roomMembers = new Vector<>();
@@ -210,7 +274,13 @@ public class Mapper {
         }
     }
 
-    public void saveMessage(String opposite, Message message) {
+    /**
+     * Save the offline message
+     *
+     * @param username the username of the user to save the message
+     * @param message  the message to be saved
+     */
+    public void saveMessage(String username, Message message) {
         Connection connection = null;
         try {
             connection = connectionPool.getConnection();
@@ -220,7 +290,7 @@ public class Mapper {
             statement.setString(3, message.getContent());
             statement.setLong(4, message.isRoom() ? 1 : 0);
             statement.setLong(5, message.getTimestamp());
-            statement.setString(6, opposite);
+            statement.setString(6, username);
             statement.executeUpdate();
         } catch (Exception e) {
             e.printStackTrace();
@@ -231,6 +301,13 @@ public class Mapper {
         }
     }
 
+    /**
+     * Get the offline messages of a user
+     *
+     * @param username the username of the user to get the messages
+     * @return the offline messages of the user
+     * @throws Exception if the operation fails
+     */
     public Vector<Message> getMessages(String username) throws Exception {
         Connection connection = null;
         Vector<Message> messages = new Vector<>();

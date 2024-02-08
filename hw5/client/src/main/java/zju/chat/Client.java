@@ -4,33 +4,69 @@ import lombok.Getter;
 import lombok.Setter;
 import zju.chat.model.ChatRequest;
 import zju.chat.model.ChatResponse;
-import zju.chat.model.UserInfoBody;
 import zju.chat.model.Message;
+import zju.chat.model.UserInfoBody;
 
 import javax.swing.*;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.*;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.NoSuchElementException;
 import java.util.Vector;
 import java.util.concurrent.*;
 
+/**
+ * Client is a class that handles requests from the client.
+ * It is created when a client connects.
+ * It is destroyed when the client closes the connection.
+ */
 @Getter
 @Setter
 public class Client {
 
-    private String username;
-    private Chat chat;
-    private HashMap<String, Vector<Message>> messages = new HashMap<>();
+    /**
+     * The socket that connects to the client.
+     */
     private final Socket socket;
+    /**
+     * The input and output streams of the socket.
+     */
     private final ObjectInputStream in;
+    /**
+     * The output stream of the socket.
+     */
     private final ObjectOutputStream out;
+    /**
+     * The mapper that maps messages to the database.
+     */
     private final Mapper mapper;
-    private long startTimestamp;
+    /**
+     * The scheduler that periodically updates the database.
+     */
     private final ScheduledExecutorService scheduler;
+    /**
+     * The username of the client.
+     */
+    private String username;
+    /**
+     * The chat window of the client.
+     */
+    private Chat chat;
+    /**
+     * The cached messages of the client.
+     */
+    private HashMap<String, Vector<Message>> messages = new HashMap<>();
+    /**
+     * The timestamp when the database is last updated.
+     */
+    private long startTimestamp;
+    /**
+     * The futures of the request.
+     */
     private CompletableFuture<ChatResponse> loginFuture;
     private CompletableFuture<ChatResponse> sendFuture;
     private CompletableFuture<ChatResponse> roomMembersFuture;
@@ -39,65 +75,26 @@ public class Client {
     private CompletableFuture<ChatResponse> joinRoomFuture;
     private CompletableFuture<ChatResponse> checkUserFuture;
 
-    class Receiver extends Thread {
-        @Override
-        public void run() {
-            while (true) {
-                ChatResponse response = null;
-                try {
-                    response = (ChatResponse) in.readObject();
-                } catch (EOFException e) {
-                    System.out.println("Client has closed the connection");
-                    break;
-                } catch (IOException e) {
-                    System.err.println("IO error: " + e.getMessage());
-                    if (socket.isClosed()) {
-                        break;
-                    }
-                    try {
-                        socket.close();
-                    } catch (IOException ex) {
-                        ex.printStackTrace();
-                    }
-                    JOptionPane.showMessageDialog(chat, "Connection reset, please login again.", "Error", JOptionPane.ERROR_MESSAGE);
-                    break;
-                } catch (ClassNotFoundException e) {
-                    System.err.println("Failed to read request: " + e.getMessage());
-                    continue;
-                }
-
-                assert response != null;
-                if (response.getCommand().equals("message")) {
-                    receiveMessage((Message) response.getPayload());
-                } else if (response.getCommand().equals("getRoomMembers")) {
-                    roomMembersFuture.complete(response);
-                } else if (response.getCommand().equals("quitRoom")) {
-                    quitRoomFuture.complete(response);
-                } else if (response.getCommand().equals("createRoom")) {
-                    createRoomFuture.complete(response);
-                } else if (response.getCommand().equals("joinRoom")) {
-                    joinRoomFuture.complete(response);
-                } else if (response.getCommand().equals("checkUser")) {
-                    checkUserFuture.complete(response);
-                } else if (response.getCommand().equals("send")) {
-                    sendFuture.complete(response);
-                } else if (response.getCommand().equals("login")) {
-                    loginFuture.complete(response);
-                }
-            }
-            logout();
-        }
-    }
-
+    /**
+     * Create a client, connect to the server, start the receiver thread, login and start the scheduler.
+     *
+     * @param username the username
+     * @param password the password
+     * @param server   the server address
+     * @throws Exception if the login fails
+     */
     private Client(String username, String password, String server) throws Exception {
+        // get server address and port
         String host = server.split(":")[0];
         int port = Integer.parseInt(server.split(":")[1]);
         socket = new Socket(host, port);
         out = new ObjectOutputStream(socket.getOutputStream());
         in = new ObjectInputStream(socket.getInputStream());
         this.username = username;
-        new Receiver().start();
+
+        // start receiver thread
         startTimestamp = System.currentTimeMillis();
+        new Receiver().start();
 
         // send login
         loginFuture = new CompletableFuture<>();
@@ -110,8 +107,8 @@ public class Client {
             }
         });
 
+        // get offline messages
         Vector<Message> offlineMessages = null;
-
         try {
             ChatResponse response = loginFuture.get();
             if (!response.getStatus().equals("success")) {
@@ -127,8 +124,8 @@ public class Client {
             throw e;
         }
 
+        // start scheduler to update database every 5 minutes
         scheduler = Executors.newScheduledThreadPool(1);
-
         scheduler.scheduleWithFixedDelay(() -> {
             try {
                 concurrentDatabase();
@@ -138,6 +135,14 @@ public class Client {
         }, 1, 5, TimeUnit.MINUTES);
     }
 
+    /**
+     * Login to the server.
+     *
+     * @param username the username
+     * @param password the password
+     * @param server   the server address
+     * @throws Exception if the login fails
+     */
     public static void login(String username, String password, String server) throws Exception {
         Client client;
         try {
@@ -152,10 +157,20 @@ public class Client {
             throw new Exception("Invalid server address. Please enter the server address in the format of \"host:port\"");
         }
 
+        // login success and create chat window
         Chat chat = new Chat(client);
         client.setChat(chat);
     }
 
+    /**
+     * Register a new user.
+     *
+     * @param email    the email
+     * @param username the username
+     * @param password the password
+     * @param server   the server address
+     * @throws Exception if the registration fails
+     */
     public static void register(String email, String username, String password, String server) throws Exception {
         // check email
         if (!email.matches("[a-zA-Z0-9_]+@[a-zA-Z0-9_]+\\.[a-zA-Z0-9_]+")) {
@@ -188,6 +203,7 @@ public class Client {
             throw new Exception("Invalid server address. Please enter the server address in the format of \"host:port\"");
         }
 
+        // connect to server
         Socket socket;
         ObjectOutputStream out;
         ObjectInputStream in;
@@ -201,6 +217,7 @@ public class Client {
             throw new Exception("Failed to connect to server");
         }
 
+        // send register request
         try {
             ChatRequest request = new ChatRequest("register", new UserInfoBody(email, username, password));
             out.writeObject(request);
@@ -208,7 +225,6 @@ public class Client {
             ChatResponse response = (ChatResponse) in.readObject();
             if (!response.getStatus().equals("success")) {
                 throw new Exception((String) response.getPayload());
-            } else {
             }
         } catch (Exception e) {
             throw new Exception("Failed to register: " + e.getMessage());
@@ -219,12 +235,26 @@ public class Client {
         }
     }
 
+    /**
+     * Send a request to the server.
+     *
+     * @param command the command of the request
+     * @param payload the payload of the request
+     * @throws Exception if the request fails
+     */
     private void send(String command, Object payload) throws Exception {
         ChatRequest request = new ChatRequest(command, payload);
         out.writeObject(request);
         out.flush();
     }
 
+    /**
+     * Get the messages of a contact.
+     *
+     * @param contact the contact
+     * @return the messages of the contact
+     * @throws Exception if the sql query fails
+     */
     public Vector<Message> getMessages(String contact) throws Exception {
         if (messages.containsKey(contact)) {
             return messages.get(contact);
@@ -235,6 +265,11 @@ public class Client {
         }
     }
 
+    /**
+     * Get the contacts of the user.
+     *
+     * @return the contacts of the user
+     */
     public Vector<Message> getContacts() {
         try {
             return mapper.getContacts();
@@ -244,10 +279,19 @@ public class Client {
         }
     }
 
+    /**
+     * Send a message to a contact.
+     *
+     * @param contact the contact
+     * @param content the content of the message
+     * @param isRoom  whether the contact is a room
+     * @throws Exception if the request fails
+     */
     public void sendMessage(String contact, String content, boolean isRoom) throws Exception {
         sendFuture = new CompletableFuture<>();
         Message message = new Message(username, contact, content, isRoom, System.currentTimeMillis());
         send("send", message);
+        // if the message is sent successfully, add the message to the chat window
         sendFuture.thenAccept(response -> {
             if (response.getStatus().equals("success")) {
                 receiveMessage(message);
@@ -257,6 +301,12 @@ public class Client {
         });
     }
 
+    /**
+     * Add a contact.
+     *
+     * @param contact the contact
+     * @param isRoom  whether the contact is a room
+     */
     public void addContact(String contact, boolean isRoom) {
         // if the contact has already existed, do nothing
         try {
@@ -308,6 +358,13 @@ public class Client {
         }
     }
 
+    /**
+     * Get the members of a room.
+     *
+     * @param room the room name
+     * @return the members of the room
+     * @throws Exception if the room does not exist
+     */
     public Vector<String> getRoomMembers(String room) throws Exception {
         roomMembersFuture = new CompletableFuture<>();
         send("getRoomMembers", room);
@@ -325,6 +382,12 @@ public class Client {
         return (Vector<String>) response.getPayload();
     }
 
+    /**
+     * Quit a room.
+     *
+     * @param room the room name
+     * @throws Exception if the operation fails
+     */
     public void quitRoom(String room) throws Exception {
         quitRoomFuture = new CompletableFuture<>();
         send("quitRoom", room);
@@ -339,8 +402,17 @@ public class Client {
         if (!response.getStatus().equals("success")) {
             throw new Exception("Failed to quit room: " + response.getPayload().toString());
         }
+        // remove the room from the chat window
+        messages.remove(room);
+        // delete the messages of the room from the database
+        mapper.deleteRoom(room);
     }
 
+    /**
+     * Receive a message.
+     *
+     * @param message the message
+     */
     public void receiveMessage(Message message) {
         System.out.println("Receive message: " + message);
         Vector<Message> listModel = messages.computeIfAbsent(message.getOpposite(username), k -> new Vector<>());
@@ -355,6 +427,12 @@ public class Client {
         });
     }
 
+    /**
+     * Join a room.
+     *
+     * @param room the room name
+     * @throws Exception if the room does not exist
+     */
     private void joinRoom(String room) throws Exception {
         joinRoomFuture = new CompletableFuture<>();
         send("joinRoom", room);
@@ -375,6 +453,12 @@ public class Client {
         }
     }
 
+    /**
+     * Create a room.
+     *
+     * @param room the room name
+     * @throws Exception if the operation fails
+     */
     private void createRoom(String room) throws Exception {
         createRoomFuture = new CompletableFuture<>();
         send("createRoom", room);
@@ -391,6 +475,12 @@ public class Client {
         }
     }
 
+    /**
+     * Check if a user exists.
+     *
+     * @param username the username
+     * @throws Exception if the user does not exist
+     */
     private void checkUser(String username) throws Exception {
         checkUserFuture = new CompletableFuture<>();
         send("checkUser", username);
@@ -407,12 +497,23 @@ public class Client {
         }
     }
 
+    /**
+     * Concurrent the database.
+     *
+     * @throws Exception if the sql query fails
+     */
     private void concurrentDatabase() throws Exception {
+        // get the start and end timestamp of the messages to be concurrent
         long lastTimestamp = startTimestamp;
-        startTimestamp = System.currentTimeMillis();
-        mapper.concurrent(messages, lastTimestamp);
+        long currentTimestamp = System.currentTimeMillis();
+        mapper.concurrent(messages, lastTimestamp, currentTimestamp);   // concurrent the database
+        startTimestamp = currentTimestamp;
     }
 
+    /**
+     * Logout.
+     * close the socket, stop the scheduler and concurrent the database.
+     */
     public void logout() {
         if (mapper != null) {
             try {
@@ -428,6 +529,52 @@ public class Client {
             socket.close();
         } catch (IOException e) {
             JOptionPane.showMessageDialog(chat, "Failed to close socket: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Receiver is a thread that receives responses from the server.
+     */
+    class Receiver extends Thread {
+        @Override
+        public void run() {
+            while (true) {
+                ChatResponse response = null;
+                try {
+                    response = (ChatResponse) in.readObject();
+                } catch (EOFException e) {
+                    System.out.println("Client has closed the connection");
+                    break;
+                } catch (IOException e) {
+                    System.err.println("IO error: " + e.getMessage());
+                    if (socket.isClosed()) {
+                        break;
+                    }
+                    try {
+                        socket.close();
+                    } catch (IOException ex) {
+                        ex.printStackTrace();
+                    }
+                    JOptionPane.showMessageDialog(chat, "Connection reset, please login again.", "Error", JOptionPane.ERROR_MESSAGE);
+                    break;
+                } catch (ClassNotFoundException e) {
+                    System.err.println("Failed to read request: " + e.getMessage());
+                    continue;
+                }
+
+                assert response != null;
+                switch (response.getCommand()) {
+                    case "message" -> receiveMessage((Message) response.getPayload());
+                    case "getRoomMembers" -> roomMembersFuture.complete(response);
+                    case "quitRoom" -> quitRoomFuture.complete(response);
+                    case "createRoom" -> createRoomFuture.complete(response);
+                    case "joinRoom" -> joinRoomFuture.complete(response);
+                    case "checkUser" -> checkUserFuture.complete(response);
+                    case "send" -> sendFuture.complete(response);
+                    case "login" -> loginFuture.complete(response);
+                }
+            }
+            logout();
         }
     }
 

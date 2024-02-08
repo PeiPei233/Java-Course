@@ -5,17 +5,27 @@ import zju.chat.Style;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * ZLabel: the custom label of the program
+ */
 public class ZLabel extends JLabel {
 
-    public static enum Type {
-        PRIMARY, SECONDARY, SUCCESS, DANGER, WARNING, INFO, LIGHT, DARK, LINK
-    }
-
+    /**
+     * Constructor
+     *
+     * @param text the text of the label
+     */
     public ZLabel(String text) {
         super(text);
         setFont(Style.font);
     }
 
+    /**
+     * Constructor
+     *
+     * @param text the text of the label
+     * @param type the type of the label
+     */
     public ZLabel(String text, Type type) {
         this(text);
         switch (type) {
@@ -47,6 +57,13 @@ public class ZLabel extends JLabel {
                 setForeground(new Color(0, 123, 255));
                 break;
         }
+    }
+
+    /**
+     * The type of the label.
+     */
+    public enum Type {
+        PRIMARY, SECONDARY, SUCCESS, DANGER, WARNING, INFO, LIGHT, DARK, LINK
     }
 
 }
